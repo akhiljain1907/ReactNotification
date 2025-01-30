@@ -1,117 +1,99 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
+import React, { useEffect, useState } from 'react';
+import { View, Text, Button, NativeModules, NativeEventEmitter, StyleSheet } from 'react-native';
 
-import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+const App = (): React.JSX.Element => {
+  const [deviceToken, setDeviceToken] = useState<string | null>(null);
+  const [notificationData, setNotificationData] = useState<any>(null);
+  const [tappedNotificationData, setTappedNotificationData] = useState<any>(null);
+  const [notificationTapped, setNotificationTapped] = useState<boolean>(false);
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+  useEffect(() => {
+    console.log('NativeModules:', NativeModules); // Log all available modules
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+    const { PushNotificationManager } = NativeModules;
+    if (!PushNotificationManager) {
+      console.error('PushNotificationManager is undefined!');
+      return;
+    }
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+    const eventEmitter = new NativeEventEmitter(PushNotificationManager);
+    const tokenSubscription = eventEmitter.addListener('onDeviceTokenReceived', (data) => {
+      console.log('Received Device Token:', data.deviceToken);
+      setDeviceToken(data.deviceToken);
+    });
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
+    const notificationSubscription = eventEmitter.addListener('onNotificationReceived', (data) => {
+      console.log('Notification Received Event:', data);
+      if (!notificationTapped) {
+        setNotificationData(data);
+      }
+    });
 
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+    const tapSubscription = eventEmitter.addListener('onNotificationTapped', (data) => {
+      console.log('Notification Tapped Event:', data);
+      setNotificationTapped(true);
+      setTappedNotificationData(data);
+    });
+
+    return () => {
+      tokenSubscription.remove();
+      notificationSubscription.remove();
+      tapSubscription.remove();
+    };
+  }, []);
+
+  const scheduleNotification = () => {
+    const { PushNotificationManager } = NativeModules;
+    if (PushNotificationManager) {
+      PushNotificationManager.scheduleLocalNotification();
+    } else {
+      console.error('PushNotificationManager is undefined!');
+    }
   };
 
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
-          }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+    <View style={styles.container}>
+      <Text style={styles.tokenText}>
+        {deviceToken ? `Device Token:\n${deviceToken}` : 'Waiting for device token...'}
+      </Text>
+      {notificationData && (
+        <Text style={styles.notificationText}>
+          {`Notification Received: ${JSON.stringify(notificationData)}`}
+        </Text>
+      )}
+      {tappedNotificationData && (
+        <Text style={[styles.notificationText, styles.tappedText]}>
+          {`Notification Tapped: ${JSON.stringify(tappedNotificationData)}`}
+        </Text>
+      )}
+      <Button title="Schedule Notification" onPress={scheduleNotification} />
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F5F5F5',
+    paddingHorizontal: 20,
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  tokenText: {
+    fontSize: 16,
+    color: 'black',
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  notificationText: {
+    fontSize: 14,
+    color: 'blue',
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  highlight: {
-    fontWeight: '700',
+  tappedText: {
+    color: 'green',
+    marginTop: 10,
   },
 });
 
