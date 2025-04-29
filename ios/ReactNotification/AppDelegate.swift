@@ -1,11 +1,18 @@
 import UIKit
 import React
+import AEPCore
+import AEPCampaignClassic
 import React_RCTAppDelegate
 import ReactAppDependencyProvider
 
 @main
 class AppDelegate: RCTAppDelegate, UNUserNotificationCenterDelegate {
   override func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey : Any]? = nil) -> Bool {
+    
+    MobileCore.initialize(appId: "3149c49c3910/0f12baf27522/launch-c219c0fa9543")
+    
+    MobileCore.setPrivacyStatus(.optedIn)
+    MobileCore.setLogLevel(.debug)
     
     // Set the delegate BEFORE requesting authorization
     UNUserNotificationCenter.current().delegate = self
@@ -32,6 +39,7 @@ class AppDelegate: RCTAppDelegate, UNUserNotificationCenterDelegate {
     self.initialProps = [:]
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+    
   }
 
   
@@ -41,7 +49,18 @@ class AppDelegate: RCTAppDelegate, UNUserNotificationCenterDelegate {
       PushNotificationManager.sharedInstance?.handleNotificationReceived(notification)
       completionHandler([.alert, .sound, .badge])
   }
+  
+//  override func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any]) async -> UIBackgroundFetchResult {
+//    print("Here")
+//    return UIBackgroundFetchResult.newData
+//  }
+  
+  override func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
+    print("Here")
+    completionHandler(.newData)
+  }
 
+  
   // Handle notification when user taps on it
   func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
       print("didReceive called for notification:", response.notification.request.content.title)
@@ -54,7 +73,7 @@ class AppDelegate: RCTAppDelegate, UNUserNotificationCenterDelegate {
       // Convert the device token to a string (hex format)
       let tokenString = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
       print("Device Token: \(tokenString)")
-      
+//    CampaignClassic.registerDevice(token: deviceToken, userKey: "akhil-ios", additionalParameters: nil)
       // Send device token to React Native
       PushNotificationManager.sharedInstance?.sendDeviceTokenToReactNative(tokenString)
   }

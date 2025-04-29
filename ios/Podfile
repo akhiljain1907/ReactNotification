@@ -12,6 +12,8 @@ linkage = ENV['USE_FRAMEWORKS']
 if linkage != nil
   Pod::UI.puts "Configuring Pod with #{linkage}ally linked Frameworks".green
   use_frameworks! :linkage => linkage.to_sym
+else
+  use_frameworks! :linkage => :static
 end
 
 target 'ReactNotification' do
@@ -31,5 +33,14 @@ target 'ReactNotification' do
       :mac_catalyst_enabled => false,
       # :ccache_enabled => true
     )
+
+    # Add flag to AEP library targets
+    installer.pods_project.targets.each do |t|
+      if t.name.start_with?("AEP")
+        t.build_configurations.each do |bc|
+            bc.build_settings['OTHER_SWIFT_FLAGS'] = '$(inherited) -no-verify-emitted-module-interface'
+        end
+      end
+    end
   end
 end

@@ -1,5 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Button, NativeModules, NativeEventEmitter, StyleSheet } from 'react-native';
+import { CampaignClassic } from "@adobe/react-native-aepcampaignclassic";
+import {
+  MobileCore,
+  Lifecycle,
+  Signal,
+  Event,
+  Identity,
+  LogLevel,
+  PrivacyStatus,
+} from '@adobe/react-native-aepcore';
 
 const App = (): React.JSX.Element => {
   const [deviceToken, setDeviceToken] = useState<string | null>(null);
@@ -8,7 +18,7 @@ const App = (): React.JSX.Element => {
   const [notificationTapped, setNotificationTapped] = useState<boolean>(false);
 
   useEffect(() => {
-    console.log('NativeModules:', NativeModules); // Log all available modules
+    console.log('NativeModules:', NativeModules);
 
     const { PushNotificationManager } = NativeModules;
     if (!PushNotificationManager) {
@@ -16,20 +26,23 @@ const App = (): React.JSX.Element => {
       return;
     }
 
-    const eventEmitter = new NativeEventEmitter(PushNotificationManager);
-    const tokenSubscription = eventEmitter.addListener('onDeviceTokenReceived', (data) => {
+    // iOS event emitter
+    const iosEmitter = new NativeEventEmitter(PushNotificationManager);
+    const tokenSubscription = iosEmitter.addListener('onDeviceTokenReceived', (data) => {
       console.log('Received Device Token:', data.deviceToken);
       setDeviceToken(data.deviceToken);
+      console.log('Registered device api is  called with token:', data.deviceToken);
+      CampaignClassic.registerDeviceWithToken(data.deviceToken, 'akhiljain@adobe.com');
     });
 
-    const notificationSubscription = eventEmitter.addListener('onNotificationReceived', (data) => {
+    const notificationSubscription = iosEmitter.addListener('onNotificationReceived', (data) => {
       console.log('Notification Received Event:', data);
       if (!notificationTapped) {
         setNotificationData(data);
       }
     });
 
-    const tapSubscription = eventEmitter.addListener('onNotificationTapped', (data) => {
+    const tapSubscription = iosEmitter.addListener('onNotificationTapped', (data) => {
       console.log('Notification Tapped Event:', data);
       setNotificationTapped(true);
       setTappedNotificationData(data);
